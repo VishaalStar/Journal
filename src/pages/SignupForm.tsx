@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // Use this hook for navigation
+import { useNavigate } from "react-router-dom";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { IconBrandGoogle } from "@tabler/icons-react";
+import { auth, provider,signInWithPopup } from "@/firebase/firebase"; // Correct path
+// Import from the correct path
 
 export function SignupFormDemo() {
   const [formData, setFormData] = useState({
@@ -33,7 +35,6 @@ export function SignupFormDemo() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Validation logic
     const newErrors: any = {};
     if (!formData.firstname) newErrors.firstname = "First name is required";
     if (!formData.lastname) newErrors.lastname = "Last name is required";
@@ -50,11 +51,20 @@ export function SignupFormDemo() {
 
     if (Object.keys(newErrors).length === 0) {
       console.log("Form submitted with data:", formData);
-
-      // Navigate to home page after successful signup
-      navigate("/home"); // Navigates to the home page
+      navigate("/home");
     } else {
       setErrors(newErrors);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await signInWithPopup(auth, provider); // Use correct imports
+      const user = result.user;
+      console.log("Google Sign-In successful", user);
+      navigate("/home"); // Navigate to home page after successful sign-in
+    } catch (error) {
+      console.error("Google Sign-In Error", error);
     }
   };
 
@@ -137,11 +147,12 @@ export function SignupFormDemo() {
         <div className="flex flex-col space-y-4">
           <button
             className=" relative group/btn flex space-x-2 items-center justify-start px-4 w-full text-black rounded-md h-10 font-medium shadow-input bg-gray-50 dark:bg-zinc-900 dark:shadow-[0px_0px_1px_1px_var(--neutral-800)]"
-            type="submit"
+            type="button"
+            onClick={handleGoogleSignIn}
           >
             <IconBrandGoogle className="h-4 w-4 text-neutral-800 dark:text-neutral-300" />
             <span className="text-neutral-700 dark:text-neutral-300 text-sm">
-              Google
+              Sign in with Google
             </span>
             <BottomGradient />
           </button>
