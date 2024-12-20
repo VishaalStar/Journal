@@ -4,8 +4,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { IconBrandGoogle } from "@tabler/icons-react";
-import { auth, provider,signInWithPopup } from "@/firebase/firebase"; // Correct path
-// Import from the correct path
+import {
+  auth,
+  provider,
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+} from "@/firebase/firebase";
+import { GoogleAuthProvider } from "firebase/auth";
 
 export function SignupFormDemo() {
   const [formData, setFormData] = useState({
@@ -22,7 +27,7 @@ export function SignupFormDemo() {
     password: "",
   });
 
-  const navigate = useNavigate(); // Hook to navigate programmatically
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -32,10 +37,11 @@ export function SignupFormDemo() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const newErrors: any = {};
+
     if (!formData.firstname) newErrors.firstname = "First name is required";
     if (!formData.lastname) newErrors.lastname = "Last name is required";
     if (!formData.email) newErrors.email = "Email is required";
@@ -50,8 +56,24 @@ export function SignupFormDemo() {
     }
 
     if (Object.keys(newErrors).length === 0) {
-      console.log("Form submitted with data:", formData);
-      navigate("/home");
+      try {
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          formData.email,
+          formData.password
+        );
+        const user = userCredential.user;
+
+        console.log("User created successfully:", user);
+
+        navigate("/home");
+      } catch (error: any) {
+        console.error("Error signing up user:", error);
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          email: "Email already in use",
+        }));
+      }
     } else {
       setErrors(newErrors);
     }
@@ -59,10 +81,16 @@ export function SignupFormDemo() {
 
   const handleGoogleSignIn = async () => {
     try {
-      const result = await signInWithPopup(auth, provider); // Use correct imports
+      const customProvider = new GoogleAuthProvider();
+      customProvider.setCustomParameters({
+        prompt: "select_account",
+      });
+
+      const result = await signInWithPopup(auth, customProvider);
       const user = result.user;
+
       console.log("Google Sign-In successful", user);
-      navigate("/home"); // Navigate to home page after successful sign-in
+      navigate("/home");
     } catch (error) {
       console.error("Google Sign-In Error", error);
     }
@@ -71,11 +99,10 @@ export function SignupFormDemo() {
   return (
     <div className="max-w-md w-full mx-auto rounded-none md:rounded-2xl p-4 md:p-8 shadow-input bg-white dark:bg-black">
       <h2 className="font-bold text-xl text-neutral-800 dark:text-neutral-200">
-        Welcome to Aceternity
+        Welcome to Signup Page
       </h2>
       <p className="text-neutral-600 text-sm max-w-sm mt-2 dark:text-neutral-300">
-        Login to aceternity if you can because we don&apos;t have a login flow
-        yet
+        Login to Our Page
       </p>
 
       <form className="my-8" onSubmit={handleSubmit}>
@@ -107,6 +134,7 @@ export function SignupFormDemo() {
             {errors.lastname && <p className="text-red-500">{errors.lastname}</p>}
           </LabelInputContainer>
         </div>
+
         <LabelInputContainer className="mb-4">
           <Label htmlFor="email">Email Address</Label>
           <Input
@@ -120,6 +148,7 @@ export function SignupFormDemo() {
           />
           {errors.email && <p className="text-red-500">{errors.email}</p>}
         </LabelInputContainer>
+
         <LabelInputContainer className="mb-4">
           <Label htmlFor="password">Password</Label>
           <Input
@@ -135,18 +164,17 @@ export function SignupFormDemo() {
         </LabelInputContainer>
 
         <button
-          className="bg-gradient-to-br relative group/btn from-black dark:from-zinc-900 dark:to-zinc-900 to-neutral-600 block dark:bg-zinc-800 w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:shadow-[0px_1px_0px_0px_var(--zinc-800)_inset,0px_-1px_0px_0px_var(--zinc-800)_inset]"
+          className="bg-gradient-to-br from-black to-neutral-600 block w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset]"
           type="submit"
         >
           Sign up &rarr;
-          <BottomGradient />
         </button>
 
         <div className="bg-gradient-to-r from-transparent via-neutral-300 dark:via-neutral-700 to-transparent my-8 h-[1px] w-full" />
 
         <div className="flex flex-col space-y-4">
           <button
-            className=" relative group/btn flex space-x-2 items-center justify-start px-4 w-full text-black rounded-md h-10 font-medium shadow-input bg-gray-50 dark:bg-zinc-900 dark:shadow-[0px_0px_1px_1px_var(--neutral-800)]"
+            className="relative flex space-x-2 items-center justify-start px-4 w-full text-black rounded-md h-10 font-medium shadow-input bg-gray-50 dark:bg-zinc-900"
             type="button"
             onClick={handleGoogleSignIn}
           >
@@ -154,22 +182,12 @@ export function SignupFormDemo() {
             <span className="text-neutral-700 dark:text-neutral-300 text-sm">
               Sign in with Google
             </span>
-            <BottomGradient />
           </button>
         </div>
       </form>
     </div>
   );
 }
-
-const BottomGradient = () => {
-  return (
-    <>
-      <span className="group-hover/btn:opacity-100 block transition duration-500 opacity-0 absolute h-px w-full -bottom-px inset-x-0 bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
-      <span className="group-hover/btn:opacity-100 blur-sm block transition duration-500 opacity-0 absolute h-px w-1/2 mx-auto -bottom-px inset-x-10 bg-gradient-to-r from-transparent via-indigo-500 to-transparent" />
-    </>
-  );
-};
 
 const LabelInputContainer = ({
   children,
@@ -178,9 +196,5 @@ const LabelInputContainer = ({
   children: React.ReactNode;
   className?: string;
 }) => {
-  return (
-    <div className={cn("flex flex-col space-y-2 w-full", className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn("flex flex-col space-y-2 w-full", className)}>{children}</div>;
 };

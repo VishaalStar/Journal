@@ -1,88 +1,94 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
-import NavbarDemo from "./Navbar";
-import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
+import Navbar from "./Navbar";
 
-const photos = ["/bg-1.jpg", "/bg-2.jpg", "/bg-3.jpg", "/bg-4.jpg", "/bg-1.jpg"];
+const Home : React.FC = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
 
-const Home: React.FC = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [user, setUser] = useState<any>(null); // State to hold user data
-  const navigate = useNavigate();
+  const slides = [
+    {
+      image: "COORG.jpg",
+      title: "Coorg, Karnataka",
+      subtitle: "Scotland of India",
+    },
+    {
+      image: "DARJEELING.jpg",
+      title: "Darjeeling, West Bengal",
+      subtitle: "Queen of Hills",
+    },
+    {
+      image: "GANGTOK.jpg",
+      title: "Gangtok, Sikkim",
+      subtitle: "City of Monasteries",
+    },
+    {
+      image: "SHILLONG.jpg",
+      title: "Shillong, Meghalaya",
+      subtitle: "Scotland of East",
+    },
+  ];
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % photos.length);
-    }, 3000);
-
-    // Check if user is logged in
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser)); // Set the user data from localStorage
-    }
-
-    return () => clearInterval(interval);
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 5000);
+    return () => clearInterval(timer); // Clear interval on unmount
   }, []);
 
-  const handleSignupClick = () => {
-    navigate("/signup");
-  };
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll); // Cleanup
+  }, []);
 
   return (
     <>
-      <div className="absolute top-4 right-4 z-50">
-        <Button onClick={handleSignupClick}>Signup/Login</Button>
-      </div>
-
-      <div className="relative z-40">
-        <NavbarDemo />
-      </div>
-
-      <div className="min-h-screen bg-white text-black flex flex-col items-center justify-center">
-        <div className="relative w-full h-96 overflow-hidden">
-          {photos.map((photo, index) => (
-            <motion.img
-              key={index}
-              src={photo}
-              alt={`Carousel image ${index + 1}`}
-              className="absolute w-full h-full object-cover"
-              initial={{ opacity: 0, x: 50 }}
-              animate={
-                index === currentIndex
-                  ? { opacity: 1, x: 0 }
-                  : { opacity: 0, x: -50 }
-              }
-              transition={{ duration: 0.8, ease: "easeInOut" }}
-              style={{ zIndex: index === currentIndex ? 1 : 0 }}
-            />
-          ))}
-        </div>
-        <h1 className="text-4xl mt-4">Welcome to the Home Page!</h1>
-
-        {/* User button with hover effect */}
-        {user && (
-          <div className="relative mt-8">
-            <Button className="relative group">
-              User Info
-              <div className="absolute top-0 left-0 w-full h-full bg-gray-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center">
-                <p className="text-white">{user.email}</p>
-                <p className="text-white">{user.documentary}</p>
-                <div className="flex space-x-2 mt-2">
-                  {user.photos.map((photo: string, index: number) => (
-                    <img
-                      key={index}
-                      src={photo}
-                      alt={`User photo ${index + 1}`}
-                      className="w-10 h-10 rounded-full"
-                    />
-                  ))}
-                </div>
-              </div>
-            </Button>
+    <Navbar   isScrolled={isScrolled} />
+    <section className="relative min-h-[100vh] w-full flex items-center justify-center overflow-hidden">
+      {/* Background Slides */}
+      {slides.map((slide, index) => (
+        <div
+          key={index}
+          className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+            currentSlide === index ? "opacity-100 z-10" : "opacity-0 z-0"
+          }`}
+          style={{
+            backgroundImage: `url('${slide.image}')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center center",
+          }}
+        >
+          {/* Content Below Image */}
+          <div className="absolute bottom-10 w-full text-center text-white">
+            <h1 className="text-[2rem] sm:text-[2.5rem] md:text-[3.5rem] lg:text-[4.5rem] font-serif mb-2">
+              {slide.title}
+            </h1>
+            <p className="text-xl sm:text-2xl opacity-80">{slide.subtitle}</p>
           </div>
-        )}
+        </div>
+      ))}
+
+      {/* Carousel Indicators */}
+      <div className="absolute bottom-4 flex justify-center space-x-2 z-20">
+        {slides.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentSlide(index)}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              currentSlide === index ? "bg-white/40 w-5" : "bg-white/20"
+            }`}
+            aria-label={`Go to slide ${index + 1}`}
+          />
+        ))}
       </div>
+    </section>
     </>
   );
 };
