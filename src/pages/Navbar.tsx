@@ -1,54 +1,95 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList } from "@/components/ui/navigation-menu";
 import { LogIn, Menu, ChevronRight, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useNavigate } from 'react-router-dom';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"; // Import ShadCN Avatar components
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import { cn } from "@/lib/utils";
-import { SignupFormDemo } from './SignupForm';
-import MapUI from './MapUI';
 
 interface NavigationItemsProps {
   isScrolled: boolean;
   isMobile: boolean;
   handleNavigation: (page: string) => void;
   isLoggedIn: boolean;
-  handleLogout: () => void; // Function to handle logout
+  user: { avatarUrl: string; name: string }; // User object
+  handleLogout: () => void;
 }
 
-const NavigationItems: React.FC<NavigationItemsProps> = ({ isScrolled, isMobile, handleNavigation, isLoggedIn, handleLogout }) => (
-  <NavigationMenuList className={cn(isMobile ? "flex flex-col space-y-4" : "space-x-8", "items-center")}>
-    {['Journal', 'Gallery', 'Map'].map((item) => (
-      <NavigationMenuItem key={item} className="mx-2">
-        <NavigationMenuLink
-          className={cn(
-            "font-sans transition-all duration-300 cursor-pointer relative group",
-            isMobile ? "text-gray-900 text-lg" : isScrolled ? "text-gray-800 hover:text-rose-500" : "text-white hover:text-rose-300",
-            "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5",
-            isScrolled ? "after:bg-rose-500" : "after:bg-white",
-            "after:transition-all after:duration-300 hover:after:w-full"
+const NavigationItems: React.FC<NavigationItemsProps> = ({
+  isScrolled,
+  isMobile,
+  handleNavigation,
+  isLoggedIn,
+  user,
+  handleLogout,
+}) => {
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false); // Define state for dropdown visibility
+
+  return (
+    <NavigationMenuList
+      className={cn(
+        isMobile ? "flex flex-col space-y-4" : "space-x-8",
+        "items-center"
+      )}
+    >
+      {['Journal', 'Gallery', 'Map'].map((item) => (
+        <NavigationMenuItem key={item} className="mx-2">
+          <NavigationMenuLink
+            className={cn(
+              "font-sans transition-all duration-300 cursor-pointer relative group",
+              isMobile ? "text-gray-900 text-lg" : isScrolled ? "text-gray-800 hover:text-rose-500" : "text-white hover:text-rose-300",
+              "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5",
+              isScrolled ? "after:bg-rose-500" : "after:bg-white",
+              "after:transition-all after:duration-300 hover:after:w-full"
+            )}
+            onClick={() => handleNavigation(item)}
+          >
+            {item}
+          </NavigationMenuLink>
+        </NavigationMenuItem>
+      ))}
+      {isLoggedIn ? (
+        <NavigationMenuItem className="ml-4 relative">
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2"
+            onClick={() => setDropdownOpen((prev) => !prev)} // Toggle dropdown
+          >
+            <Avatar className="w-8 h-8 bg-rose-500">
+              <AvatarImage src={user.avatarUrl} alt={user.name || "User Avatar"} />
+              <AvatarFallback>{user.name?.charAt(0) || "U"}</AvatarFallback>
+            </Avatar>
+            <span className="text-sm font-medium text-gray-800">{user.name}</span>
+          </Button>
+
+          {/* Dropdown menu */}
+          {dropdownOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md">
+              <button
+                onClick={() => handleNavigation('Profile')}
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+              >
+                Profile
+              </button>
+              <button
+                onClick={() => handleNavigation('Settings')}
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+              >
+                Settings
+              </button>
+              <button
+                onClick={handleLogout}
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+              >
+                Log Out
+              </button>
+            </div>
           )}
-          onClick={() => handleNavigation(item)}
-        >
-          {item}
-        </NavigationMenuLink>
-      </NavigationMenuItem>
-    ))}
-    {/* Show Avatar if logged in */}
-    {isLoggedIn ? (
-      <NavigationMenuItem className="ml-4">
-        <Button variant="ghost" onClick={handleLogout}>
-          <Avatar className="w-8 h-8">
-            <AvatarImage src="https://your-image-url.com" alt="User Avatar" />
-            <AvatarFallback>U</AvatarFallback>
-          </Avatar>
-          <LogOut className="ml-2" />
-        </Button>
-      </NavigationMenuItem>
-    ) : (
-      <NavigationMenuItem className="ml-4">
-        <a href="/signup">
+        </NavigationMenuItem>
+      ) : (
+        <NavigationMenuItem className="ml-4">
           <Button
             className={cn(
               "flex items-center gap-2 transition-all duration-300",
@@ -56,46 +97,90 @@ const NavigationItems: React.FC<NavigationItemsProps> = ({ isScrolled, isMobile,
                 ? "bg-rose-500/80 hover:bg-rose-600/90 text-white shadow-md hover:shadow-lg"
                 : "bg-white/5 hover:bg-white/10 text-white border border-white/20 backdrop-blur-sm hover:shadow-lg"
             )}
+            onClick={() => handleNavigation('Signup')}
           >
             <LogIn className="w-4 h-4" />
             Signup/Login
             <ChevronRight className="w-4 h-4" />
           </Button>
-        </a>
-      </NavigationMenuItem>
-    )}
-  </NavigationMenuList>
-);
+        </NavigationMenuItem>
+      )}
+    </NavigationMenuList>
+  );
+};
 
 const Navbar: React.FC<{ isScrolled: boolean }> = ({ isScrolled }) => {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);  // Track login state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState({ avatarUrl: "", name: "" });
+
+  const auth = getAuth();
+  const provider = new GoogleAuthProvider();
+
+  useEffect(() => {
+    // Check if the user is already authenticated when the component mounts
+    onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setIsLoggedIn(true);
+        setUser({
+          avatarUrl: currentUser.photoURL || "",
+          name: currentUser.displayName || "User",
+        });
+      } else {
+        setIsLoggedIn(false);
+        setUser({ avatarUrl: "", name: "" });
+      }
+    });
+  }, [auth]);
 
   const handleNavigation = (page: string) => {
     switch (page) {
       case 'Journal':
-        navigate("/journal"); // Navigate to JournalPage
+        navigate("/journal");
         break;
       case 'Gallery':
-        navigate("/gallery"); // Navigate to GalleryPage (ensure this route exists)
+        navigate("/gallery");
         break;
       case 'Map':
-        navigate("/map"); // Navigate to MapPage
+        navigate("/map");
+        break;
+      case 'Profile':
+        navigate("/profile"); // Navigate to profile page
+        break;
+      case 'Settings':
+        navigate("/settings"); // Navigate to settings page
+        break;
+      case 'Signup':
+        navigate("/signup");
         break;
       default:
         break;
     }
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);  // Logout user and reset login state
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Error signing in with Google", error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error signing out", error);
+    }
   };
 
   return (
-    <nav className={cn(
-      "fixed w-full h-16 z-50 transition-all duration-300",
-      isScrolled ? "bg-white/30 backdrop-blur-md border-b border-white/20" : "bg-black/5 backdrop-blur-sm"
-    )}>
+    <nav
+      className={cn(
+        "fixed w-full h-16 z-50 transition-all duration-300",
+        isScrolled ? "bg-white/30 backdrop-blur-md border-b border-white/20" : "bg-black/5 backdrop-blur-sm"
+      )}
+    >
       <div className="container h-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-full">
           {/* Logo */}
@@ -110,8 +195,9 @@ const Navbar: React.FC<{ isScrolled: boolean }> = ({ isScrolled }) => {
                 isScrolled={isScrolled}
                 isMobile={false}
                 handleNavigation={handleNavigation}
-                isLoggedIn={isLoggedIn}  // Pass the login state
-                handleLogout={handleLogout}  // Pass the logout handler
+                isLoggedIn={isLoggedIn}
+                user={user}
+                handleLogout={handleLogout}
               />
             </NavigationMenuList>
           </NavigationMenu>
@@ -139,17 +225,19 @@ const Navbar: React.FC<{ isScrolled: boolean }> = ({ isScrolled }) => {
                     isScrolled={true}
                     isMobile={true}
                     handleNavigation={handleNavigation}
-                    isLoggedIn={isLoggedIn}  // Pass the login state
-                    handleLogout={handleLogout}  // Pass the logout handler
+                    isLoggedIn={isLoggedIn}
+                    user={user}
+                    handleLogout={handleLogout}
                   />
                 </NavigationMenu>
-                <a href="/signup">
-                  <Button className="w-full bg-rose-500/80 hover:bg-rose-600/90 text-white mt-4 shadow-md hover:shadow-lg">
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Signup/Login
-                    <ChevronRight className="ml-2 w-4 h-4" />
-                  </Button>
-                </a>
+                <Button
+                  className="w-full bg-rose-500/80 hover:bg-rose-600/90 text-white mt-4 shadow-md hover:shadow-lg"
+                  onClick={handleLogin}
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Login
+                  <ChevronRight className="ml-2 w-4 h-4" />
+                </Button>
               </nav>
             </SheetContent>
           </Sheet>
